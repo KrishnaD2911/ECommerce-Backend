@@ -52,7 +52,12 @@ export const getGiftCards = asyncHandler(async (req, res, next) => {
   const filter = { isDeleted: false };
   
   const resPerPage = Number(req.query.limit) || 12;
-  const apiFeatures = new APIFeatures(GiftCard.find(filter).populate('createdBy', 'name email'), req.query)
+  const apiFeatures = new APIFeatures(
+    GiftCard.find(filter)
+      .populate('createdBy', 'name email')
+      .populate('usedBy.user', 'name email'), 
+    req.query
+  )
     .search()
     .filter()
     .sort()
@@ -80,7 +85,9 @@ export const getGiftCards = asyncHandler(async (req, res, next) => {
  * @access  Private/Admin
  */
 export const getGiftCardById = asyncHandler(async (req, res, next) => {
-  const giftCard = await GiftCard.findOne({ _id: req.params.id, isDeleted: false }).populate('createdBy', 'name email');
+  const giftCard = await GiftCard.findOne({ _id: req.params.id, isDeleted: false })
+    .populate('createdBy', 'name email')
+    .populate('usedBy.user', 'name email');
 
   if (!giftCard) {
     return next(new ErrorHandler('Gift card not found', 404));
@@ -203,7 +210,14 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler(`This gift card is ${giftCard.status}`, 400));
   }
 
-  if (giftCard.balance <= 0) {
+  // Restrict purchased gift cards to the recipient's email
+  if (giftCard.isPurchased && giftCard.recipientEmail) {
+    if (req.user.email.toLowerCase() !== giftCard.recipientEmail.toLowerCase()) {
+      return next(new ErrorHandler('This gift card can only be used by its intended recipient', 403));
+    }
+  }
+
+  if (giftCard.isPurchased && giftCard.balance <= 0) {
     return next(new ErrorHandler('This gift card has no remaining balance', 400));
   }
 
@@ -239,8 +253,20 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Calculate the discount (capped at the card's balance or the cart total, whichever is lower)
-  const discount = Math.min(giftCard.balance, cartTotal || Infinity);
+  // Cart value must be strictly greater than the initial value of the gift card (Only for admin-created promo codes)
+  if (!giftCard.isPurchased && cartTotal <= giftCard.amount) {
+    return next(
+      new ErrorHandler(
+        `Cart value must be greater than the initial value of the gift card (₹${giftCard.amount}). Your cart total is ₹${cartTotal}.`,
+        400
+      )
+    );
+  }
+
+  // Calculate the discount
+  const discount = giftCard.isPurchased
+    ? Math.min(giftCard.balance, cartTotal || Infinity)
+    : Math.min(giftCard.amount, cartTotal || Infinity);
 
   res.status(200).json({
     success: true,

@@ -31,7 +31,14 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       return next(new ErrorHandler(`This gift card is ${giftCard.status}`, 400));
     }
 
-    if (giftCard.balance <= 0) {
+    // Restrict purchased gift cards to the recipient's email
+    if (giftCard.isPurchased && giftCard.recipientEmail) {
+      if (req.user.email.toLowerCase() !== giftCard.recipientEmail.toLowerCase()) {
+        return next(new ErrorHandler('This gift card can only be used by its intended recipient', 403));
+      }
+    }
+
+    if (giftCard.isPurchased && giftCard.balance <= 0) {
       return next(new ErrorHandler('This gift card has no remaining balance', 400));
     }
 
@@ -59,16 +66,37 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       );
     }
 
+    // Cart value must be strictly greater than the initial value of the gift card (Only for admin-created promo codes)
+    if (!giftCard.isPurchased && totalPrice <= giftCard.amount) {
+      return next(
+        new ErrorHandler(
+          `Cart value must be greater than the initial value of the gift card (₹${giftCard.amount}).`,
+          400
+        )
+      );
+    }
+
     // Calculate discount
-    discountAmount = Math.min(giftCard.balance, totalPrice);
+    if (giftCard.isPurchased) {
+      discountAmount = Math.min(giftCard.balance, totalPrice);
+      giftCard.balance -= discountAmount;
+    } else {
+      discountAmount = Math.min(giftCard.amount, totalPrice);
+      // Admin cards don't deduct balance
+    }
+
     finalPrice = totalPrice - discountAmount;
     appliedCode = giftCard.code;
 
-    // Deduct from gift card
-    giftCard.balance -= discountAmount;
+    // Increment usage
     giftCard.usageCount += 1;
+    
+    giftCard.usedBy.push({
+      user: req.user._id,
+      amountUsed: discountAmount,
+    });
 
-    if (giftCard.balance <= 0 || (giftCard.maxUsage !== null && giftCard.usageCount >= giftCard.maxUsage)) {
+    if ((giftCard.isPurchased && giftCard.balance <= 0) || (giftCard.maxUsage !== null && giftCard.usageCount >= giftCard.maxUsage)) {
       giftCard.status = 'redeemed';
     }
 

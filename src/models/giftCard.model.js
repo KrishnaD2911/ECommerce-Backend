@@ -40,6 +40,19 @@ const giftCardSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    usedBy: [
+      {
+        user: {
+          type: mongoose.Schema.ObjectId,
+          ref: 'User',
+        },
+        amountUsed: Number,
+        usedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
