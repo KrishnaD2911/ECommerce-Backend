@@ -38,7 +38,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       }
     }
 
-    if (giftCard.isPurchased && giftCard.balance <= 0) {
+    if (giftCard.balance !== null && giftCard.balance <= 0) {
       return next(new ErrorHandler('This gift card has no remaining balance', 400));
     }
 
@@ -66,8 +66,8 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // Cart value must be strictly greater than the initial value of the gift card (Only for admin-created promo codes)
-    if (!giftCard.isPurchased && totalPrice <= giftCard.amount) {
+    // Cart value must be strictly greater than the initial value of the gift card (Only for promo codes)
+    if (giftCard.balance === null && totalPrice <= giftCard.amount) {
       return next(
         new ErrorHandler(
           `Cart value must be greater than the initial value of the gift card (₹${giftCard.amount}).`,
@@ -77,15 +77,15 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     }
 
     // Calculate discount
-    if (giftCard.isPurchased) {
+    if (giftCard.balance !== null) {
       discountAmount = Math.min(giftCard.balance, totalPrice);
       giftCard.balance -= discountAmount;
     } else {
       discountAmount = Math.min(giftCard.amount, totalPrice);
-      // Admin cards don't deduct balance
+      // Promo codes don't deduct balance
     }
 
-    finalPrice = totalPrice - discountAmount;
+    finalPrice = Math.round(totalPrice - discountAmount);
     appliedCode = giftCard.code;
 
     // Increment usage
@@ -96,7 +96,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       amountUsed: discountAmount,
     });
 
-    if ((giftCard.isPurchased && giftCard.balance <= 0) || (giftCard.maxUsage !== null && giftCard.usageCount >= giftCard.maxUsage)) {
+    if ((giftCard.balance !== null && giftCard.balance <= 0) || (giftCard.maxUsage !== null && giftCard.usageCount >= giftCard.maxUsage)) {
       giftCard.status = 'redeemed';
     }
 

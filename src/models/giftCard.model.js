@@ -16,7 +16,7 @@ const giftCardSchema = new mongoose.Schema(
     },
     balance: {
       type: Number,
-      required: true,
+      default: null,
       min: [0, 'Balance cannot be negative'],
     },
     status: {
@@ -93,13 +93,6 @@ const giftCardSchema = new mongoose.Schema(
   }
 );
 
-// Middleware to automatically set balance to amount if not provided on creation
-giftCardSchema.pre('validate', function (next) {
-  if (this.isNew && this.balance === undefined) {
-    this.balance = this.amount;
-  }
-  next();
-});
 
 const GiftCard = mongoose.model('GiftCard', giftCardSchema);
 

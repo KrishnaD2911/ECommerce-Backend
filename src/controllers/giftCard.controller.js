@@ -217,7 +217,7 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
     }
   }
 
-  if (giftCard.isPurchased && giftCard.balance <= 0) {
+  if (giftCard.balance !== null && giftCard.balance <= 0) {
     return next(new ErrorHandler('This gift card has no remaining balance', 400));
   }
 
@@ -253,8 +253,8 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Cart value must be strictly greater than the initial value of the gift card (Only for admin-created promo codes)
-  if (!giftCard.isPurchased && cartTotal <= giftCard.amount) {
+  // Cart value must be strictly greater than the initial value of the gift card (Only for promo codes)
+  if (giftCard.balance === null && cartTotal <= giftCard.amount) {
     return next(
       new ErrorHandler(
         `Cart value must be greater than the initial value of the gift card (₹${giftCard.amount}). Your cart total is ₹${cartTotal}.`,
@@ -264,7 +264,7 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
   }
 
   // Calculate the discount
-  const discount = giftCard.isPurchased
+  const discount = giftCard.balance !== null
     ? Math.min(giftCard.balance, cartTotal || Infinity)
     : Math.min(giftCard.amount, cartTotal || Infinity);
 
@@ -308,10 +308,13 @@ export const purchaseGiftCard = asyncHandler(async (req, res, next) => {
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
+  // Add 10% bonus to the purchased amount
+  const boostedAmount = Math.round(amount * 1.10);
+
   const giftCard = await GiftCard.create({
     code: newCode,
-    amount,
-    balance: amount,
+    amount: boostedAmount,
+    balance: boostedAmount,
     status: 'active',
     expiryDate,
     maxUsage: null,
