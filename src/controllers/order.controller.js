@@ -35,6 +35,10 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       return next(new ErrorHandler('This gift card has no remaining balance', 400));
     }
 
+    if (giftCard.activationDate && new Date() < new Date(giftCard.activationDate)) {
+      return next(new ErrorHandler('The provided gift card is not active yet', 400));
+    }
+
     if (giftCard.expiryDate && new Date(giftCard.expiryDate) < new Date()) {
       giftCard.status = 'expired';
       await giftCard.save();

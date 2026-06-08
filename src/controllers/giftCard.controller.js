@@ -207,6 +207,16 @@ export const applyGiftCard = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler('This gift card has no remaining balance', 400));
   }
 
+  // Check activation
+  if (giftCard.activationDate && new Date() < new Date(giftCard.activationDate)) {
+    const actDate = new Date(giftCard.activationDate).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return next(new ErrorHandler(`This gift card is not active yet. It will activate on ${actDate}.`, 400));
+  }
+
   // Check expiry
   if (giftCard.expiryDate && new Date(giftCard.expiryDate) < new Date()) {
     giftCard.status = 'expired';
@@ -422,3 +432,4 @@ export const getMyGiftCards = asyncHandler(async (req, res, next) => {
     data: giftCards,
   });
 });
+

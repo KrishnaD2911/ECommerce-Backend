@@ -24,6 +24,10 @@ const giftCardSchema = new mongoose.Schema(
       enum: ['active', 'inactive', 'redeemed', 'expired'],
       default: 'active',
     },
+    activationDate: {
+      type: Date,
+      default: null,
+    },
     expiryDate: {
       type: Date,
       default: null,
