@@ -11,6 +11,7 @@ import {
   getGiftCardStats,
   exportGiftCardsCSV,
   getMyGiftCards,
+  approveGiftCard,
 } from '../controllers/giftCard.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
@@ -37,5 +38,7 @@ router.route('/:id')
   .get(getGiftCardById)
   .put(updateGiftCard)
   .delete(deleteGiftCard);
+
+router.put('/:id/approve', approveGiftCard);
 
 export default router;

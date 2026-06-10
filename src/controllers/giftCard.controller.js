@@ -315,7 +315,7 @@ export const purchaseGiftCard = asyncHandler(async (req, res, next) => {
     code: newCode,
     amount: boostedAmount,
     balance: boostedAmount,
-    status: 'active',
+    status: 'pending',
     expiryDate,
     maxUsage: null,
     createdBy: req.user.id,
@@ -462,3 +462,28 @@ export const getMyGiftCards = asyncHandler(async (req, res, next) => {
   });
 });
 
+/**
+ * @desc    Approve a pending gift card (Admin)
+ * @route   PUT /api/v1/giftcards/:id/approve
+ * @access  Private/Admin
+ */
+export const approveGiftCard = asyncHandler(async (req, res, next) => {
+  const giftCard = await GiftCard.findById(req.params.id);
+
+  if (!giftCard || giftCard.isDeleted) {
+    return next(new ErrorHandler('Gift card not found', 404));
+  }
+
+  if (giftCard.status !== 'pending') {
+    return next(new ErrorHandler(`This gift card is already ${giftCard.status}`, 400));
+  }
+
+  giftCard.status = 'active';
+  await giftCard.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Gift card approved and activated',
+    data: giftCard,
+  });
+});
