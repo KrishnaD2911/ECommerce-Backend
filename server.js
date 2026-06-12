@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import app from './src/app.js';
 import connectDB from './src/config/db.js';
 import { initSocket } from './src/socket.js';
+import startCronJobs from './src/utils/cronJobs.js';
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +20,7 @@ const startServer = async () => {
     });
 
     initSocket(server);
+    startCronJobs();
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {

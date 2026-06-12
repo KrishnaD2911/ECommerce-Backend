@@ -34,6 +34,15 @@ export const createGiftCard = asyncHandler(async (req, res, next) => {
     req.body.code = newCode;
   }
 
+  if (req.body.activationDate) {
+    const actDate = new Date(req.body.activationDate);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    if (actDate > today) {
+      req.body.status = 'inactive';
+    }
+  }
+
   const giftCard = await GiftCard.create(req.body);
 
   res.status(201).json({
@@ -121,12 +130,18 @@ export const updateGiftCard = asyncHandler(async (req, res, next) => {
   }
 
   // Auto-update status if limits reached
-  if (req.body.balance !== undefined && req.body.balance <= 0) {
+  if (req.body.balance !== undefined && req.body.balance !== null && req.body.balance <= 0) {
     req.body.status = 'redeemed';
   } else if (req.body.maxUsage !== undefined && req.body.maxUsage !== null && giftCard.usageCount >= req.body.maxUsage) {
     req.body.status = 'redeemed';
+  } else if (req.body.activationDate) {
+    const actDate = new Date(req.body.activationDate);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    if (actDate > today) {
+      req.body.status = 'inactive';
+    }
   }
-
   giftCard = await GiftCard.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
